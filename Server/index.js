@@ -8,7 +8,7 @@ import connectDB from './Config/MongoDB.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
-// connectDB();
+connectDB();
 
 app.use(express.json());
 app.use(cookieParser());

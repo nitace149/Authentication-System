@@ -2,7 +2,6 @@ import bcrypt from "bcrypt";
 import jwt from 'jsonwebtoken';
 import userModel from '../Models/UserModel.js';
 import transporter from '../Config/nodeMailer.js'
-import { use } from "react";
 
 export const register =  async (req, res) => {
   const { name, email, password } = req.body;
@@ -41,13 +40,12 @@ export const register =  async (req, res) => {
 
     await transporter.sendMail(mailOption);
     
-    return res.json({success:true})
+    return res.json({ success: true, message: "Registration successful" })
 
   } catch (error) {
     res.json({ success: false, message: error.message });
   }
 };
-
 
 export const login = async (req, res) => {
   const {email, password} = req.body;
@@ -108,9 +106,9 @@ export const sendVerifyOtp = async (req, res) => {
   try {
     const {userId} = req.body;
 
-    const user = await userModel.findOne(userId);
+   const user = await userModel.findOne({ _id: userId });
     if (user.isAccountVerified){
-      return json({success: false, message:"Account already verifyed"})
+      return res.json({success: false, message:"Account already verifyed"})
     }
     const otp = String(Math.floor(100000 + Math.random() * 900000));
 
@@ -118,6 +116,9 @@ export const sendVerifyOtp = async (req, res) => {
     user.verifyOTPexpireAt = Date.now()+24*60*60*1000;
 
     await user.save();
+
+   
+
     const mailOption = {
       from: process.env.SENDER_EMAIL,
       to: user.email,
@@ -134,35 +135,50 @@ export const sendVerifyOtp = async (req, res) => {
 
 }
 
-export default verifyEmail = async (req, res) => {
-  const {userId, otp} = req.body;
+export const verifyEmail = async (req, res) => {
+
+const { otp, userId } = req.body;
+
+const stringOtp = String(otp); 
 
   if (!userId || !otp){
-    res.json({success:false, message:"Missing Details"})
+    return res.json({success:false, message:"Missing Details"})
   }
+
   try {
-
-    const user = userModel.findOne(userId);
+    
+  const user = await userModel.findOne({ _id: userId });
+  
+  
+ 
     if (!user){
-      res.json({success:false, message:"user Not found"})
+      return res.json({success:false, message:"user Not found"})
     }
 
-    if (user.verifyOTP === '' || user.verifyOTP !== otp){
-      res.json({success: false , message:"Invalid OTP"})
-    }
+
+   if (user.verifyOTP === '' || user.verifyOTP !== stringOtp){
+  return res.json({ success: false , message:"Invalid OTP" });
+}
 
     if (user.verifyOTPexpireAt < Date.now()){
-       res.json({success: false , message:"OTP Expired"});
+      return res.json({success: false , message:"OTP Expired"});
     }
 
     user.isAccountVerified = true;
     user.verifyOTPexpireAt = 0;
     user.verifyOTP = ''
     await user.save();
-    res.json({success: true, message: 'Email verified successfully'})
+    return res.json({success: true, message: 'Email verified successfully'})
     
   } catch (error) {
-    res.json({success:false, message:error.message})
+    return res.json({success:false, message:error.message})
   }
 
 }
+
+
+
+
+
+
+
